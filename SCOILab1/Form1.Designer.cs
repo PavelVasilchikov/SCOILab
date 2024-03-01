@@ -28,13 +28,60 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            this.AddPic = new System.Windows.Forms.Button();
+            this.flowLayoutPanelImages = new System.Windows.Forms.FlowLayoutPanel();
+            this.pictureBoxResult = new System.Windows.Forms.PictureBox();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxResult)).BeginInit();
+            this.SuspendLayout();
+            // 
+            // AddPic
+            // 
+            this.AddPic.Location = new System.Drawing.Point(25, 786);
+            this.AddPic.Name = "AddPic";
+            this.AddPic.Size = new System.Drawing.Size(211, 56);
+            this.AddPic.TabIndex = 1;
+            this.AddPic.Text = "Добавить картинку";
+            this.AddPic.UseVisualStyleBackColor = true;
+            this.AddPic.Click += new System.EventHandler(this.AddPic_Click);
+            // 
+            // flowLayoutPanelImages
+            // 
+            this.flowLayoutPanelImages.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.flowLayoutPanelImages.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.flowLayoutPanelImages.Location = new System.Drawing.Point(1246, 41);
+            this.flowLayoutPanelImages.Name = "flowLayoutPanelImages";
+            this.flowLayoutPanelImages.Size = new System.Drawing.Size(410, 822);
+            this.flowLayoutPanelImages.TabIndex = 2;
+            // 
+            // pictureBoxResult
+            // 
+            this.pictureBoxResult.Location = new System.Drawing.Point(62, 39);
+            this.pictureBoxResult.Name = "pictureBoxResult";
+            this.pictureBoxResult.Size = new System.Drawing.Size(1072, 713);
+            this.pictureBoxResult.TabIndex = 3;
+            this.pictureBoxResult.TabStop = false;
+            // 
+            // Form1
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.AutoSize = true;
+            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.ClientSize = new System.Drawing.Size(1699, 967);
+            this.Controls.Add(this.pictureBoxResult);
+            this.Controls.Add(this.flowLayoutPanelImages);
+            this.Controls.Add(this.AddPic);
+            this.Name = "Form1";
             this.Text = "Form1";
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxResult)).EndInit();
+            this.ResumeLayout(false);
+
         }
 
         #endregion
+        private System.Windows.Forms.Button AddPic;
+        private System.Windows.Forms.FlowLayoutPanel flowLayoutPanelImages;
+        private System.Windows.Forms.PictureBox pictureBoxResult;
     }
 }
 

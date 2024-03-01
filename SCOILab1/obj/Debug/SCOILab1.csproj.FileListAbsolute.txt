@@ -1,0 +1,15 @@
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.csproj.AssemblyReference.cache
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.csproj.SuggestedBindingRedirects.cache
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.Form1.resources
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.Properties.Resources.resources
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.csproj.GenerateResource.cache
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.csproj.CoreCompileInputs.cache
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\SCOILab1.exe.config
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\SCOILab1.exe
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\SCOILab1.pdb
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\System.Drawing.Common.dll
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\System.Drawing.Common.pdb
+D:\СЦОИ\SCOILab\SCOILab1\bin\Debug\System.Drawing.Common.xml
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.csproj.CopyComplete
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.exe
+D:\СЦОИ\SCOILab\SCOILab1\obj\Debug\SCOILab1.pdb
