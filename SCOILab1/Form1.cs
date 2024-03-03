@@ -2,18 +2,33 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+//using static System.Net.Mime.MediaTypeNames;
 
 namespace SCOILab1
 {
     public partial class Form1 : Form
     {
-        private List<Image> loadedImages = new List<Image>();
-        
+        static private List<Bitmap> loadedBitImages = new List<Bitmap>();
+        private List<string> imagePaths = new List<string>();
+        private Bitmap outImage;
+
+        static private int totalWidth; // Допустим, начальная ширина равна ширине первого изображения
+        static private int totalHeight;
+
+        string selectedBlendMethod = "None";
+
+
+
+
         public Form1()
         {
             InitializeComponent();
@@ -40,40 +55,52 @@ namespace SCOILab1
             {
                 foreach (string fileName in openFileDialog.FileNames)
                 {
-                    Image image = Image.FromFile(fileName);
-                    loadedImages.Add(image);
+                    //Image image = Image.FromFile(fileName);
+                    //loadedImages.Add(image);
+                    Bitmap imageBit = new Bitmap(fileName);
+                    loadedBitImages.Add(imageBit);
                 }
 
                 MessageBox.Show($"Successfully loaded {openFileDialog.FileNames.Length} images.");
 
                 DisplayImages();
+
+                totalWidth = loadedBitImages[0].Width;
+                totalHeight = loadedBitImages[0].Height;
+
+                outImage = new Bitmap(totalWidth, totalHeight);
+                outImage = loadedBitImages[loadedBitImages.Count-1];
+                pictureBoxResult.Image = outImage;
+
             }
 
         }
 
+
+
         private void DisplayImages()
         {
+            Bitmap previousImage = null;
             flowLayoutPanelImages.Controls.Clear();
 
-            foreach (Image image in loadedImages)
+            foreach (Bitmap image in loadedBitImages)
             {
+                
+
                 PictureBox pictureBox1 = new PictureBox();
                 pictureBox1.Visible = true;
                 pictureBox1.Image = image;
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
                 pictureBox1.Width = 200;
                 pictureBox1.Height = 150;
-                
-                flowLayoutPanelImages.Controls.Add(pictureBox1);
 
                 ComboBox comboBox1 = new ComboBox();
 
                 comboBox1.Visible = true;
-                comboBox1.Items.AddRange(new object[] { "None", "Add", "Subtract", "Multiply" });
+                comboBox1.Items.AddRange(new object[] { "None", "Add", "Averge", "Multiply" });
                 comboBox1.SelectedIndex = 0; // Устанавливаем по умолчанию "None"
                 comboBox1.Location = new Point(pictureBox1.Right + 10, pictureBox1.Top);
-                flowLayoutPanelImages.Controls.Add(comboBox1);
-              
+                
 
                 TrackBar transparencyTrackBar = new TrackBar();
 
@@ -81,64 +108,279 @@ namespace SCOILab1
                 transparencyTrackBar.Maximum = 255;
                 transparencyTrackBar.Value = 255; // Устанавливаем максимальную прозрачность по умолчанию
                 transparencyTrackBar.Location = new Point(pictureBox1.Right + 10, pictureBox1.Bottom + 10);
-                flowLayoutPanelImages.Controls.Add(transparencyTrackBar);
-
-                comboBox1.SelectedIndexChanged += (sender, e) =>
-                {
-                    if (comboBox1.SelectedIndex.Equals(1))
-                    {
-                        MessageBox.Show("Add");
-                    }
-                    
-                    // Обработка изменения выбранного метода наложения
-                    // Обновление изображения с учетом выбранного метода
-                };
+                
 
                 transparencyTrackBar.Scroll += (sender, e) =>
                 {
-                    // Обработка изменения прозрачности изображения
-                    // Изменение прозрачности изображения в соответствии со значением трекбара
+
+                    float alpha = (float)transparencyTrackBar.Value / 255; // Преобразуем значение трекбара в диапазоне от 0 до 1 для прозрачности
+                    Bitmap imageWithAlpha = ApplyTransparency(image, alpha); // Применяем прозрачность к изображению
+                    pictureBox1.Image = imageWithAlpha; // Обновляем изображение с примененной прозрачностью
                 };
+
+                flowLayoutPanelImages.Controls.Add(pictureBox1);
+                flowLayoutPanelImages.Controls.Add(comboBox1);
+                flowLayoutPanelImages.Controls.Add(transparencyTrackBar);
+
+
+
+
+
+
+                comboBox1.SelectedIndexChanged += (sender, e) =>
+                {
+                    selectedBlendMethod = comboBox1.SelectedItem.ToString();
+                    if (previousImage != null)
+                    {
+                        ApplyBlendMethodAndUpdateImages(previousImage, (Bitmap)pictureBox1.Image, selectedBlendMethod, pictureBoxResult);
+                    }
+                    else
+                    {
+                        outImage = image;
+                        pictureBox1.Image = outImage;
+                    }
+                };
+                previousImage = image;
+
                 
 
+                
             }
         }
 
+        private Dictionary<string, Func<Bitmap, Bitmap, Bitmap>> blendMethods = new Dictionary<string, Func<Bitmap, Bitmap, Bitmap>>()
+        {
+            { "None", (result, newImage) => result },
+            { "Add", (result, newImage) => ApplyAddBlendMethod(result, newImage) },
+            { "Averge", (result, newImage) =>  ApplyAveBlendMethod(result, newImage)},
+            { "Multiply", (result, newImage) => ApplyMultiBlendMethod(result, newImage) }
+        };
+
+        private void ApplyBlendMethodAndUpdateImages(Bitmap prev, Bitmap current, string blendMethod, PictureBox pictureBox)
+        {
+
+            if (blendMethod == "None")
+            {
+                outImage = prev; // Просто отображаем текущее изображение без смешивания
+                return;
+            }
+
+            if (outImage == null)
+            {
+                outImage = new Bitmap(loadedBitImages[loadedBitImages.Count-1].Width, loadedBitImages[loadedBitImages.Count - 1].Height);
+            }
+
+            // Используем промежуточное изображение, чтобы сохранить результат всех примененных эффектов смешивания
+            using (Bitmap intermediateImage = new Bitmap(outImage))
+            {
+                outImage = blendMethods[blendMethod](intermediateImage, current);
+            }
+
+            pictureBox.Image = outImage;
+        }
+
+        static private Bitmap ApplyAddBlendMethod(Bitmap prev, Bitmap current)
+        {
+
+            // Создаем результирующее изображение такого же размера, как текущее изображение
+            Bitmap result = new Bitmap(loadedBitImages[loadedBitImages.Count - 1].Width, loadedBitImages[loadedBitImages.Count - 1].Height);
+
+            Bitmap lastImage = loadedBitImages[loadedBitImages.Count-1];
+
+
+            for (int i = 0; i < lastImage.Height; ++i)
+            {
+                for (int j = 0; j < lastImage.Width; ++j)
+                {
+                    Color curPix;
+
+                    if (i >= current.Height || j >= current.Width || i >= prev.Height || j >= prev.Width)
+                    {
+                        curPix = lastImage.GetPixel(j, i);
+                        result.SetPixel(j, i, curPix);
+                    }
+                    else
+                    {
+                        // Получаем пиксели из последнего изображения
+                        curPix = current.GetPixel(j, i);
+
+                        // Получаем пиксели из предыдущего изображения
+                        Color pix1 = prev.GetPixel(j, i);
+
+                        // Вычисляем значения цветов для нового пикселя
+                        int r1 = pix1.R;
+                        int g1 = pix1.G;
+                        int b1 = pix1.B;
+                        int r2 = curPix.R;
+                        int g2 = curPix.G;
+                        int b2 = curPix.B;
+
+                        int rFin = (int)Clamp(r1 + r2, 0, 255);
+                        int gFin = (int)Clamp(g1 + g2, 0, 255);
+                        int bFin = (int)Clamp(b1 + b2, 0, 255);
+
+                        Color pixFin = Color.FromArgb(rFin, gFin, bFin);
+
+                        // Записываем новый пиксель в результирующее изображение
+                        result.SetPixel(j, i, pixFin);
+                    }
+
+                }
+            }
+
+            return result;
+        }
+
+        static private Bitmap ApplyAveBlendMethod(Bitmap prev, Bitmap current)
+        {
+
+            // Создаем результирующее изображение такого же размера, как текущее изображение
+            Bitmap result = new Bitmap(loadedBitImages[loadedBitImages.Count - 1].Width, loadedBitImages[loadedBitImages.Count - 1].Height);
+
+            Bitmap lastImage = loadedBitImages[loadedBitImages.Count - 1];
+
+
+            for (int i = 0; i < lastImage.Height; ++i)
+            {
+                for (int j = 0; j < lastImage.Width; ++j)
+                {
+                    Color curPix;
+
+                    if (i >= current.Height || j >= current.Width || i >= prev.Height || j >= prev.Width)
+                    {
+                        curPix = lastImage.GetPixel(j, i);
+                        result.SetPixel(j, i, curPix);
+                    }
+                    else
+                    {
+                        // Получаем пиксели из последнего изображения
+                        curPix = current.GetPixel(j, i);
+
+                        // Получаем пиксели из предыдущего изображения
+                        Color pix1 = prev.GetPixel(j, i);
+
+                        // Вычисляем значения цветов для нового пикселя
+                        int r1 = pix1.R;
+                        int g1 = pix1.G;
+                        int b1 = pix1.B;
+                        int r2 = curPix.R;
+                        int g2 = curPix.G;
+                        int b2 = curPix.B;
+
+                        int rFin = (int)Clamp((r1 + r2) / 2, 0, 255);
+                        int gFin = (int)Clamp((g1 + g2) / 2, 0, 255);
+                        int bFin = (int)Clamp((b1 + b2) / 2, 0, 255);
+
+                        Color pixFin = Color.FromArgb(rFin, gFin, bFin);
+
+                        // Записываем новый пиксель в результирующее изображение
+                        result.SetPixel(j, i, pixFin);
+                    }
+
+                }
+            }
+
+            return result;
+        }
+
+        static private Bitmap ApplyMultiBlendMethod(Bitmap prev, Bitmap current)
+        {
+
+            // Создаем результирующее изображение такого же размера, как текущее изображение
+            Bitmap result = new Bitmap(loadedBitImages[loadedBitImages.Count - 1].Width, loadedBitImages[loadedBitImages.Count - 1].Height);
+
+            Bitmap lastImage = loadedBitImages[loadedBitImages.Count - 1];
+
+
+            for (int i = 0; i < lastImage.Height; ++i)
+            {
+                for (int j = 0; j < lastImage.Width; ++j)
+                {
+                    Color curPix;
+
+                    if (i >= current.Height || j >= current.Width || i >= prev.Height || j >= prev.Width)
+                    {
+                        curPix = lastImage.GetPixel(j, i);
+                        result.SetPixel(j, i, curPix);
+                    }
+                    else
+                    {
+                        // Получаем пиксели из последнего изображения
+                        curPix = current.GetPixel(j, i);
+
+                        // Получаем пиксели из предыдущего изображения
+                        Color pix1 = prev.GetPixel(j, i);
+
+                        // Вычисляем значения цветов для нового пикселя
+                        int r1 = pix1.R;
+                        int g1 = pix1.G;
+                        int b1 = pix1.B;
+                        int r2 = curPix.R;
+                        int g2 = curPix.G;
+                        int b2 = curPix.B;
+
+                        int rFin = (int)Clamp((r1 * r2)/256, 0, 255);
+                        int gFin = (int)Clamp((g1 * g2)/256, 0, 255);
+                        int bFin = (int)Clamp((b1 * b2)/256, 0, 255);
+
+                        Color pixFin = Color.FromArgb(rFin, gFin, bFin);
+
+                        // Записываем новый пиксель в результирующее изображение
+                        result.SetPixel(j, i, pixFin);
+                    }
+
+                }
+            }
+
+            return result;
+        }
 
         private async void UpdateResultImageR()
         {
-            //pictureBoxResult.Image = pictureBox1.Image;
             while (true)
             {
-                if (loadedImages.Count > 0)
+                if (loadedBitImages.Count > 0)
                 {
-                    pictureBoxResult.Image = loadedImages[0];
+                    pictureBoxResult.Image = outImage;
                     pictureBoxResult.SizeMode = PictureBoxSizeMode.Zoom;
                 }
-                 
-                //pictureBoxResult.Controls.Add(pictureBox1);
-
-                // Обработка изображения в реальном времени
-                // Например, применение фильтров или эффектов к изображению
-                // Обновление результирующей картинки
-
-                // Пример:
-                //pictureBoxResult.Image = await ApplyImageProcessingAsync(originalImage);
-
-                // Чтобы уменьшить нагрузку на процессор, рекомендуется добавить задержку
                 await Task.Delay(100); // задержка в 100 миллисекунд для обновления изображения каждые 100 мс
             }
         }
 
-        //private async Task<Image> ApplyImageProcessingAsync(Image inputImage)
-        //{
-        //    // Асинхронный метод для обработки изображения
-        //    // Например, применение фильтров или эффектов к изображению
-        //    // Возвращение обработанного изображения
+        public static T Clamp<T>(T val, T min, T max) where T : IComparable<T>
+        {
+            if (val.CompareTo(min) < 0) return min;
+            else if (val.CompareTo(max) > 0) return max;
+            else return val;
+        }
 
-        //    // Ваш код обработки изображения здесь
+        private Bitmap ApplyTransparency(Bitmap image, float alpha)
+        {
+            if (image == null)
+            {
+                return null;
+            }
 
-        //    return processedImage;
-        //}
+            Bitmap transparentImage = new Bitmap(image.Width, image.Height);
+            Graphics g = Graphics.FromImage(transparentImage);
+
+            ColorMatrix matrix = new ColorMatrix
+            {
+                Matrix33 = alpha // Устанавливаем значение прозрачности в матрице цвета
+            };
+
+            ImageAttributes attributes = new ImageAttributes();
+            attributes.SetColorMatrix(matrix, ColorMatrixFlag.Default);
+
+            g.DrawImage(image,
+                new Rectangle(0, 0, image.Width, image.Height),
+                0, 0, image.Width, image.Height,
+                GraphicsUnit.Pixel, attributes);
+
+            g.Dispose();
+
+            return transparentImage;
+        }
     }
 }
